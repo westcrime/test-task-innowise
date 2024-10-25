@@ -2,6 +2,7 @@
 using Inno_Shop.Users.Application.DTOs;
 using Inno_Shop.Users.Domain.Entities;
 using Inno_Shop.Users.Application.Services.Token;
+using Inno_Shop.Users.Application.Services.Hash;
 
 namespace Inno_Shop.Users.Application.Services
 {
@@ -9,144 +10,77 @@ namespace Inno_Shop.Users.Application.Services
     {
         private readonly ITokenService _tokenService;
         private readonly IUserRepository _userRepository;
+        private readonly IHashService _hashService;
 
-        public UserService(IUserRepository userRepositry, ITokenService tokenService)
+        public UserService(IUserRepository userRepositry, ITokenService tokenService, IHashService hashService)
         {
             _userRepository = userRepositry;
             _tokenService = tokenService;
+            _hashService = hashService;
         }
 
-        public async Task<ResponseModel<bool>> DeleteAccountAsync(Guid id)
+        public async Task DeleteUserAsync(Guid id)
         {
-            return await _userRepository.DeleteUserAsync(id);
+            await _userRepository.DeleteUserAsync(id);
         }
 
-        public async Task<ResponseModel<List<User>>> GetAllAsync()
+        public async Task<List<User>> GetAllUsersAsync()
         {
             return await _userRepository.GetAllUsersAsync();
         }
 
-        public async Task<ResponseModel<User>> GetByEmailAsync(string email)
+        public async Task<User> GetUserByEmailAsync(string email)
         {
-            return await _userRepository.GetByEmailAsync(email);
+            return await _userRepository.GetUserByEmailAsync(email);
         }
 
-        public async Task<ResponseModel<User>> GetByIdAsync(Guid id)
+        public async Task<User> GetUserByIdAsync(Guid id)
         {
-            return await _userRepository.GetByIdAsync(id);
+            return await _userRepository.GetUserByIdAsync(id);
         }
 
-        public async Task<ResponseModel<string>> LoginAsync(LoginInfoDto loginInfoDto)
+        public async Task<string> LoginUserAsync(LoginUserDto loginUserDto)
         {
-            var userResponse = await _userRepository.GetByEmailAsync(loginInfoDto.Email);
+            var user = await _userRepository.GetUserByEmailAsync(loginUserDto.Email);
 
-            if (!userResponse.Success)
+            if (user == null)
             {
-                return new ResponseModel<string>()
-                {
-                    Success = false,
-                    Data = null,
-                    ErrorMessage = userResponse.ErrorMessage
-                };
+                throw new Exception("User is null!");
             }
 
-            if (userResponse.Data.Password != loginInfoDto.Password)
+            if (user.Password != (await _hashService.GetHashAsync(loginUserDto.Password)))
             {
-                return new ResponseModel<string>()
-                {
-                    Success = false,
-                    ErrorMessage = "Wrong password!",
-                    Data = null
-                };
+                throw new Exception("Wrong password!");
             }
 
-            var tokenResponse = await _tokenService.CreateTokenAsync(userResponse.Data);
-
-            if (!tokenResponse.Success)
-            {
-                return new ResponseModel<string>()
-                {
-                    Success = false,
-                    ErrorMessage = tokenResponse.ErrorMessage,
-                    Data = tokenResponse.Data
-                };
-            }
-
-            return new ResponseModel<string>()
-            {
-                Success = true,
-                ErrorMessage = string.Empty,
-                Data = tokenResponse.Data
-            };
+            return await _tokenService.GenerateJwtTokenAsync(new JwtPayloadDto(user.Id, user.Email));
         }
 
-        public async Task<ResponseModel<string>> RegisterAsync(UserDto userDto)
+        public async Task<string> RegisterUserAsync(RegisterUserDto registerUserDto)
         {
-            var usersResponse = await _userRepository.GetAllUsersAsync();
+            var users = await _userRepository.GetAllUsersAsync();
 
-            if (!usersResponse.Success)
+            if (users.FirstOrDefault(user => user.Email == registerUserDto.Email) != null)
             {
-                return new ResponseModel<string>()
-                {
-                    Success = false,
-                    Data = null,
-                    ErrorMessage = usersResponse.ErrorMessage
-                };
-            }
-
-            if (usersResponse.Data.FirstOrDefault(user => user.Email == userDto.Email) != null)
-            {
-                return new ResponseModel<string>
-                {
-                    Success = false,
-                    Data = null,
-                    ErrorMessage = "User with this email already exists"
-                };
+                throw new Exception("User with this email already exists");
             }
 
             var newUser = new User()
             {
                 Id = Guid.NewGuid(),
-                Email = userDto.Email,
-                Name = userDto.Name,
-                Password = userDto.Password
+                Email = registerUserDto.Email,
+                Name = registerUserDto.Name,
+                Password = await _hashService.GetHashAsync(registerUserDto.Password)
             };
 
-            var createUserResponse = await _userRepository.AddUserAsync(newUser);
+            await _userRepository.AddUserAsync(newUser);
 
-            if (!createUserResponse.Success)
-            {
-                return new ResponseModel<string>()
-                {
-                    Success = false,
-                    Data = null,
-                    ErrorMessage = createUserResponse.ErrorMessage
-                };
-            }
-
-            var tokenResponse = await _tokenService.CreateTokenAsync(newUser);
-
-            if (!tokenResponse.Success)
-            {
-                return new ResponseModel<string>()
-                {
-                    Success = false,
-                    Data = null,
-                    ErrorMessage = tokenResponse.ErrorMessage
-                };
-            }
-
-            return new ResponseModel<string>()
-            {
-                Success = true,
-                Data = tokenResponse.Data,
-                ErrorMessage = string.Empty
-            };
+            return await LoginUserAsync(new LoginUserDto(registerUserDto.Email, registerUserDto.Password));
         }
 
-        public async Task<ResponseModel<bool>> UpdateUserAsync(User user)
+        public async Task UpdateUserAsync(User user)
         {
-            return await _userRepository.UpdateUserAsync(user);
+            await _userRepository.UpdateUserAsync(user);
         }
     }
 }

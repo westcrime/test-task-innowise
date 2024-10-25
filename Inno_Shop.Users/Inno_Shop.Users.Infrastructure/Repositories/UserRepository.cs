@@ -15,100 +15,56 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public async Task<ResponseModel<User>> GetByIdAsync(Guid id)
+    public async Task<User> GetUserByIdAsync(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
-            return new ResponseModel<User>
-            {
-                Success = false,
-                ErrorMessage = "User not found"
-            };
+            throw new Exception($"User with id {id} null exception!");
         }
-        return new ResponseModel<User>
-        {
-            Success = true,
-            Data = user
-        };
+        return user;
     }
 
-    public async Task<ResponseModel<User>> GetByEmailAsync(string email)
+    public async Task<User> GetUserByEmailAsync(string email)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         if (user == null)
         {
-            return new ResponseModel<User>
-            {
-                Success = false,
-                ErrorMessage = "User not found"
-            };
+            throw new Exception($"User with email {email} null exception!");
         }
-        return new ResponseModel<User>
-        {
-            Success = true,
-            Data = user
-        };
+        return user;
     }
 
-    public async Task<ResponseModel<List<User>>> GetAllUsersAsync()
+    public async Task<List<User>> GetAllUsersAsync()
     {
         var users = await _context.Users.ToListAsync();
-        return new ResponseModel<List<User>>
-        {
-            Success = true,
-            Data = users
-        };
+        return users;
     }
 
-    public async Task<ResponseModel<bool>> AddUserAsync(User user)
+    public async Task AddUserAsync(User user)
     {
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
-        return new ResponseModel<bool>
-        {
-            Success = true,
-            Data = true
-        };
     }
 
-    public async Task<ResponseModel<bool>> DeleteUserAsync(Guid id)
+    public async Task DeleteUserAsync(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
-            return new ResponseModel<bool>
-            {
-                Success = false,
-                ErrorMessage = "User not found"
-            };
+            throw new Exception($"User with id {id} null exception!");
         }
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
-        return new ResponseModel<bool>
-        {
-            Success = true,
-            Data = true
-        };
     }
 
-    public async Task<ResponseModel<bool>> UpdateUserAsync(User user)
+    public async Task UpdateUserAsync(User user)
     {
         if ((await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email && u.Id != user.Id)) != null)
         {
-            return new ResponseModel<bool>
-            {
-                Success = false,
-                Data = false,
-                ErrorMessage = "User with this email already Exists"
-            };
+            throw new Exception("User with this email already Exists");
         }
         _context.Users.Update(user);
         await _context.SaveChangesAsync();
-        return new ResponseModel<bool>
-        {
-            Success = true,
-            Data = true
-        };
     }
 }

@@ -1,8 +1,11 @@
-﻿using Inno_Shop.Users.Application.DTOs;
+﻿using Inno_Shop.Users.API.Middlewares;
+using Inno_Shop.Users.Application.DTOs;
 using Inno_Shop.Users.Application.Services;
 using Inno_Shop.Users.Application.Services.Email;
+using Inno_Shop.Users.Application.Services.Hash;
 using Inno_Shop.Users.Application.Services.Token;
 using Inno_Shop.Users.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inno_Shop.Users.API.Controllers
@@ -14,146 +17,158 @@ namespace Inno_Shop.Users.API.Controllers
         private readonly IUserService _userService;
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
+        private readonly IHashService _hashService;
 
-        public UsersController(IUserService userService, IEmailService emailService, ITokenService tokenService)
+        public UsersController(IUserService userService, IEmailService emailService, ITokenService tokenService, IHashService hashService)
         {
             _userService = userService;
             _emailService = emailService;
             _tokenService = tokenService;
+            _hashService = hashService;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserDto registerUserDto)
+        public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
         {
-            var resultResponse = await _userService.RegisterAsync(registerUserDto);
-
-            if (resultResponse.Success)
+            try
             {
-                return Ok(resultResponse);
+                var result = await _userService.RegisterUserAsync(registerUserDto);
+
+                Response.Cookies.Append("jwt", result, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true
+                });
+
+                return Ok(new
+                {
+                    Message = "Registration is successful!"
+                });
             }
-            return BadRequest(resultResponse);
+            catch (Exception ex) 
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginInfoDto loginUserDto)
+        public async Task<IActionResult> Login([FromBody] LoginUserDto loginUserDto)
         {
-            var resultResponse = await _userService.LoginAsync(loginUserDto);
-
-            if (resultResponse.Success)
+            try
             {
-                return Ok(new { Token = resultResponse.Data });
+                var result = await _userService.LoginUserAsync(loginUserDto);
+
+                Response.Cookies.Append("jwt", result, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true
+                });
+
+                return Ok(new
+                {
+                    Message = "Login is successful!"
+                });
             }
-            return Unauthorized(resultResponse);
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        [HttpPost("validate")]
-        public async Task<IActionResult> Validate([FromBody] string token)
+        [Authorize]
+        [HttpGet("validate")]
+        public async Task<IActionResult> Validate()
         {
-            var resultResponse = await _tokenService.ValidateTokenAsync(token);
-
-            if (resultResponse.Success)
+            return Ok(new
             {
-                return Ok(resultResponse);
-            }
-            return Unauthorized(resultResponse);
+                Success = true
+            });
         }
 
-        public async Task<ResponseModel<bool>> CheckIfUserIsAdminOrItIsHisAccount(PayloadDto payload, string id)
+        [Authorize]
+        [HttpPost("delete")]
+        public async Task<IActionResult> DeleteUser([FromBody] string email)
         {
-            if (payload.Role == Domain.Entities.Roles.Admin)
+            try
             {
-                return new ResponseModel<bool>
+                if (!Request.Cookies.TryGetValue("jwt", out var token))
                 {
-                    Success = true,
-                    Data = true,
-                    ErrorMessage = string.Empty
-                };
-            }
-            else
-            {
-                var userResponse = await _userService.GetByEmailAsync(payload.Email);
+                    return Unauthorized(new { message = "Token not found in cookies." });
+                }
 
-                if (!userResponse.Success)
+                var user = await _userService.GetUserByEmailAsync((await _tokenService.GetJwtPayload(token)).Email);
+
+                if (user.Email != email && user.Role != Roles.Admin)
                 {
-                    return new ResponseModel<bool>
-                    {
-                        Success = false,
-                        Data = false,
-                        ErrorMessage = userResponse.ErrorMessage
-                    };
+                    return BadRequest(new { message = "Wrong role for this action." });
+                }
+
+                await _userService.DeleteUserAsync((await _userService.GetUserByEmailAsync(email)).Id);
+
+                return Ok(new { message = "Successfully deleted." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpPost("send-code")]
+        public async Task<IActionResult> SendCodeForVerification()
+        {
+            try
+            {
+                if (!Request.Cookies.TryGetValue("jwt", out var token))
+                {
+                    return Unauthorized(new { message = "Token not found in cookies." });
+                }
+
+                var user = await _userService.GetUserByEmailAsync((await _tokenService.GetJwtPayload(token)).Email);
+
+                var code = await _emailService.SendEmailToken(user.Email);
+
+                user.EmailToken = code;
+
+                await _userService.UpdateUserAsync(user);
+
+                return Ok(new { message = "Email code has been sent successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpPost("verify")]
+        public async Task<IActionResult> VerifyUser([FromBody] string code)
+        {
+            try
+            {
+                if (!Request.Cookies.TryGetValue("jwt", out var token))
+                {
+                    return Unauthorized(new { message = "Token not found in cookies." });
+                }
+
+                var user = await _userService.GetUserByEmailAsync((await _tokenService.GetJwtPayload(token)).Email);
+
+                if (code == user.EmailToken)
+                {
+                    user.IsVerified = true;
+
+                    await _userService.UpdateUserAsync(user);
                 }
                 else
                 {
-                    if (userResponse.Data.Id != Guid.Parse(id))
-                    {
-                        return new ResponseModel<bool>
-                        {
-                            Success = true,
-                            Data = false,
-                            ErrorMessage = string.Empty
-                        };
-                    }
-                    else
-                    {
-                        return new ResponseModel<bool>
-                        {
-                            Success = true,
-                            Data = true,
-                            ErrorMessage = string.Empty
-                        };
-                    }
+                    throw new Exception("Wrong verification code!");
                 }
+
+                return Ok(new { message = "Your profile has been verified successfully." });
             }
-        }
-
-        [HttpPost("delete")]
-        public async Task<IActionResult> DeleteUser([FromBody] string token, [FromBody] string id)
-        {
-            var validateResponse = await _tokenService.ValidateTokenAsync(token);
-
-            if (!validateResponse.Success)
+            catch (Exception ex)
             {
-                return BadRequest(validateResponse);
-            }
-
-            var payloadResponse = await _tokenService.GetPayloadAsync(token);
-
-            if (!payloadResponse.Success)
-            {
-                return BadRequest(payloadResponse);
-            }
-
-            var userToDeleteResponse = await _userService.GetByIdAsync(Guid.Parse(id));
-
-            if (!userToDeleteResponse.Success)
-            {
-                return BadRequest(userToDeleteResponse);
-            }
-
-            var checkResponse = await CheckIfUserIsAdminOrItIsHisAccount(payloadResponse.Data, id);
-
-            if (!checkResponse.Success)
-            {
-                return BadRequest(checkResponse);
-            }
-
-            if (checkResponse.Data == false)
-            {
-                return BadRequest(new ResponseModel<User>
-                {
-                    Data = null,
-                    Success = false,
-                    ErrorMessage = "Can't do this with your role"
-                });
-            }
-            else
-            {
-                return Ok(new ResponseModel<User>
-                {
-                    Success = true,
-                    Data = userToDeleteResponse.Data,
-                    ErrorMessage = string.Empty
-                });
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

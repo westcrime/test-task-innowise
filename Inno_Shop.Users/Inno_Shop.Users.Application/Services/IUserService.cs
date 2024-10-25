@@ -10,12 +10,12 @@ namespace Inno_Shop.Users.Application.Services
 {
     public interface IUserService
     {
-        Task<ResponseModel<string>> RegisterAsync(UserDto userDto);
-        Task<ResponseModel<bool>> DeleteAccountAsync(Guid id);
-        Task<ResponseModel<string>> LoginAsync(LoginInfoDto loginInfoDto);
-        Task<ResponseModel<User>> GetByIdAsync(Guid id);
-        Task<ResponseModel<List<User>>> GetAllAsync();
-        Task<ResponseModel<User>> GetByEmailAsync(string email);
-        Task<ResponseModel<bool>> UpdateUserAsync(User user);
+        Task<string> RegisterUserAsync(RegisterUserDto userDto);
+        Task DeleteUserAsync(Guid id);
+        Task<string> LoginUserAsync(LoginUserDto loginInfoDto);
+        Task<User> GetUserByIdAsync(Guid id);
+        Task<List<User>> GetAllUsersAsync();
+        Task<User> GetUserByEmailAsync(string email);
+        Task UpdateUserAsync(User user);
     }
 }

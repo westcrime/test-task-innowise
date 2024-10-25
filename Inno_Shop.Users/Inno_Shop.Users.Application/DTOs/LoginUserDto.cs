@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace Inno_Shop.Users.Application.DTOs
 {
-    public record LoginInfoDto(string Email, string Password);
+    public record LoginUserDto(string Email, string Password);
 }

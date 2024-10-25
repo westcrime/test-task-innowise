@@ -13,6 +13,9 @@ namespace Inno_Shop.Users.Domain.Entities
         public string Email { get; set; }
         public string Password { get; set; }
         public Roles Role { get; set; } = Roles.User;
+
+        public string EmailToken { get; set; } = string.Empty;
+        public bool IsVerified { get; set; } = false;
     }
 
     public enum Roles {
