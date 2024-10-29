@@ -10,7 +10,7 @@ namespace Inno_Shop.Users.Application.Services.Token
 {
     public interface ITokenService
     {
-        Task<string> GenerateJwtTokenAsync(JwtPayloadDto jwtPayloadDto);
-        Task<JwtPayloadDto> GetJwtPayload(string token);
+        Task<Response<string>> GenerateJwtTokenAsync(JwtPayloadDto jwtPayloadDto);
+        Task<Response<JwtPayloadDto>> GetJwtPayload(string token);
     }
 }

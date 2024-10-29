@@ -1,4 +1,5 @@
 ﻿using Inno_Shop.Users.Application.Repositories;
+using Inno_Shop.Users.Application.Services;
 using Inno_Shop.Users.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -15,39 +16,40 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public async Task<User> GetUserByIdAsync(Guid id)
+    public async Task<Response<User>> GetUserByIdAsync(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
             throw new Exception($"User with id {id} null exception!");
         }
-        return user;
+        return new Response<User>(user, Result.Success());
     }
 
-    public async Task<User> GetUserByEmailAsync(string email)
+    public async Task<Response<User>> GetUserByEmailAsync(string email)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         if (user == null)
         {
-            throw new Exception($"User with email {email} null exception!");
+            return new Response<User>(null, Result.Failure(UserErrors.WrongEmail));
         }
-        return user;
+        return new Response<User>(user, Result.Success());
     }
 
-    public async Task<List<User>> GetAllUsersAsync()
+    public async Task<Response<List<User>>> GetAllUsersAsync()
     {
         var users = await _context.Users.ToListAsync();
-        return users;
+        return new Response<List<User>>(users, Result.Success());
     }
 
-    public async Task AddUserAsync(User user)
+    public async Task<Response<User>> AddUserAsync(User user)
     {
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+        return new Response<User>(user, Result.Success());
     }
 
-    public async Task DeleteUserAsync(Guid id)
+    public async Task<Response<User>> DeleteUserAsync(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
         if (user == null)
@@ -56,15 +58,22 @@ public class UserRepository : IUserRepository
         }
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
+        return new Response<User>(user, Result.Success());
     }
 
-    public async Task UpdateUserAsync(User user)
+    public async Task<Response<User>> UpdateUserAsync(User user)
     {
         if ((await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email && u.Id != user.Id)) != null)
         {
-            throw new Exception("User with this email already Exists");
+            return new Response<User>(null, Result.Failure(UserErrors.EmailAlreadyExists));
+        }
+
+        if ((await _context.Users.FirstOrDefaultAsync(u => u.Name == user.Name && u.Id != user.Id)) != null)
+        {
+            return new Response<User>(null, Result.Failure(UserErrors.NameAlreadyExists));
         }
         _context.Users.Update(user);
         await _context.SaveChangesAsync();
+        return new Response<User>(user, Result.Success());
     }
 }

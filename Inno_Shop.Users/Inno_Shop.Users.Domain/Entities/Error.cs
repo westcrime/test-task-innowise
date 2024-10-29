@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace Inno_Shop.Users.Domain.Entities
 {
-    public class ResponseModel<T>
+    public sealed record Error(string Code, string? Description = null)
     {
-        public T Data { get; set; }
-        public bool Success { get; set; } = true;
-        public string ErrorMessage { get; set; }
+        public static readonly Error None = new(string.Empty);
     }
 }

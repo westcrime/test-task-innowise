@@ -9,11 +9,11 @@ namespace Inno_Shop.Users.Application.Repositories
 {
     public interface IUserRepository
     {
-        Task<User> GetUserByIdAsync(Guid id);
-        Task<User> GetUserByEmailAsync(string email);
-        Task<List<User>> GetAllUsersAsync();
-        Task AddUserAsync(User user);
-        Task DeleteUserAsync(Guid id);
-        Task UpdateUserAsync(User user);
+        Task<Response<User>> GetUserByIdAsync(Guid id);
+        Task<Response<User>> GetUserByEmailAsync(string email);
+        Task<Response<List<User>>> GetAllUsersAsync();
+        Task<Response<User>> AddUserAsync(User user);
+        Task<Response<User>> DeleteUserAsync(Guid id);
+        Task<Response<User>> UpdateUserAsync(User user);
     }
 }

@@ -1,13 +1,19 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Inno_Shop.Users.API.Extensions;
+using Inno_Shop.Users.API.Infrastructure;
 using Inno_Shop.Users.API.Middlewares;
+using Inno_Shop.Users.API.Validators;
 using Inno_Shop.Users.Application.Repositories;
 using Inno_Shop.Users.Application.Services;
 using Inno_Shop.Users.Application.Services.Email;
 using Inno_Shop.Users.Application.Services.Hash;
 using Inno_Shop.Users.Application.Services.Token;
+using Inno_Shop.Users.Application.Validators;
 using Inno_Shop.Users.Infrastructure.JwtOptions;
 using Inno_Shop.Users.Infrastructure.Services.Email;
 using Inno_Shop.Users.Infrastructure.Services.Hash;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -35,9 +41,42 @@ builder.Services.AddScoped<IHashService, HashService>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<LoginUserDtoValidator>();
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<RegisterUserDtoValidator>();
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<AddUserDtoValidator>();
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<ForgotPasswordDtoValidator>();
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<UpdateUserDtoValidator>();
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<UpdateUserForAdminDtoValidator>();
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<LoginUserDtoValidator>();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=InnoShopDB.sqlite"));
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 var app = builder.Build();
 
@@ -58,6 +97,8 @@ app.UseWhen(context => !(context.Request.Path.StartsWithSegments("/api/Users/log
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseExceptionHandler();
 
 app.MapControllers();
 

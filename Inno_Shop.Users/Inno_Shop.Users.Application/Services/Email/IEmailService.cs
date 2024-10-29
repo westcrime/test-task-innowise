@@ -9,6 +9,6 @@ namespace Inno_Shop.Users.Application.Services.Email
 {
     public interface IEmailService
     {
-        Task<string> SendEmailToken(string email);
+        Task<Response<string>> SendEmailToken(string email);
     }
 }

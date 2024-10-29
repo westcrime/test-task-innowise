@@ -1,4 +1,6 @@
-﻿using Inno_Shop.Users.API.Middlewares;
+﻿using Inno_Shop.Users.API.DTOs;
+using Inno_Shop.Users.API.Extensions;
+using Inno_Shop.Users.API.Middlewares;
 using Inno_Shop.Users.Application.DTOs;
 using Inno_Shop.Users.Application.Services;
 using Inno_Shop.Users.Application.Services.Email;
@@ -30,49 +32,65 @@ namespace Inno_Shop.Users.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                var result = await _userService.RegisterUserAsync(registerUserDto);
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                   .Select(e => e.ErrorMessage)
+                   .ToList();
 
-                Response.Cookies.Append("jwt", result, new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true
-                });
-
-                return Ok(new
-                {
-                    Message = "Registration is successful!"
-                });
+                var errorMessages = string.Join("; ", errors);
+                ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
             }
-            catch (Exception ex) 
+
+            var resultResponse = await _userService.RegisterUserAsync(registerUserDto);
+
+            if (resultResponse.Result.IsFailure)
             {
-                return BadRequest(ex.Message);
+                return ResultExtensions.ToProblemDetails(resultResponse.Result);
             }
+
+            Response.Cookies.Append("jwt", resultResponse.Data, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true
+            });
+
+            return Ok(new
+            {
+                Message = "Registration is successful!"
+            });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginUserDto loginUserDto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                var result = await _userService.LoginUserAsync(loginUserDto);
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                   .Select(e => e.ErrorMessage)
+                   .ToList();
 
-                Response.Cookies.Append("jwt", result, new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true
-                });
-
-                return Ok(new
-                {
-                    Message = "Login is successful!"
-                });
+                var errorMessages = string.Join("; ", errors);
+                ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
             }
-            catch (Exception ex)
+
+            var resultResponse = await _userService.LoginUserAsync(loginUserDto);
+
+            if (resultResponse.Result.IsFailure)
             {
-                return BadRequest(ex.Message);
+                return ResultExtensions.ToProblemDetails(resultResponse.Result);
             }
+
+            Response.Cookies.Append("jwt", resultResponse.Data, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true
+            });
+
+            return Ok(new
+            {
+                Message = "Login is successful!"
+            });
         }
 
         [Authorize]
@@ -85,91 +103,391 @@ namespace Inno_Shop.Users.API.Controllers
             });
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
+        [HttpGet("get-user")]
+        public async Task<IActionResult> GetUser([FromBody] string email)
+        {
+            var userResponse = await _userService.GetUserByEmailAsync(email);
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            return Ok(new { user = userResponse.Data });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("get-users")]
+        public async Task<IActionResult> GetUsers()
+        {
+            var userResponse = await _userService.GetAllUsersAsync();
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            return Ok(new { users = userResponse.Data });
+        }
+
+        [Authorize(Roles = "Admin")]
         [HttpPost("delete")]
         public async Task<IActionResult> DeleteUser([FromBody] string email)
         {
-            try
+            if (!Request.Cookies.TryGetValue("jwt", out var token))
             {
-                if (!Request.Cookies.TryGetValue("jwt", out var token))
-                {
-                    return Unauthorized(new { message = "Token not found in cookies." });
-                }
-
-                var user = await _userService.GetUserByEmailAsync((await _tokenService.GetJwtPayload(token)).Email);
-
-                if (user.Email != email && user.Role != Roles.Admin)
-                {
-                    return BadRequest(new { message = "Wrong role for this action." });
-                }
-
-                await _userService.DeleteUserAsync((await _userService.GetUserByEmailAsync(email)).Id);
-
-                return Ok(new { message = "Successfully deleted." });
+                return Unauthorized(new { message = "Token not found in cookies." });
             }
-            catch (Exception ex)
+
+            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
+
+            if (getJwtPayloadResponse.Result.IsFailure)
             {
-                return BadRequest(new { message = ex.Message });
+                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
             }
+
+            var userResponse = await _userService.GetUserByEmailAsync(email);
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            var deleteResponse = await _userService.DeleteUserAsync(userResponse.Data.Id);
+
+            if (deleteResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(deleteResponse.Result);
+            }
+
+            return Ok(new { message = "Successfully deleted." });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("add")]
+        public async Task<IActionResult> AddUser([FromBody] AddUserDto addUserDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                   .Select(e => e.ErrorMessage)
+                   .ToList();
+
+                var errorMessages = string.Join("; ", errors);
+                ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
+            }
+
+            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            {
+                return Unauthorized(new { message = "Token not found in cookies." });
+            }
+
+            var hashedPassword = await _hashService.GetHashAsync(addUserDto.Password);
+
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = addUserDto.Email,
+                Password = hashedPassword,
+                Role = Enum.Parse<Roles>(addUserDto.Role),
+                Name = addUserDto.Name,
+                IsVerified = addUserDto.IsVerified
+            };
+
+            var addResponse = await _userService.AddUserAsync(user);
+
+            if (addResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(addResponse.Result);
+            }
+
+            return Ok(new { message = "Successfully added." });
+        }
+
+
+        [Authorize]
+        [HttpPost("delete-my-account")]
+        public async Task<IActionResult> DeleteUsersAccount()
+        {
+            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            {
+                return Unauthorized(new { message = "Token not found in cookies." });
+            }
+
+            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
+
+            if (getJwtPayloadResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
+            }
+
+            var userResponse = await _userService.GetUserByEmailAsync(getJwtPayloadResponse.Data.Email);
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            var deleteResponse = await _userService.DeleteUserAsync(userResponse.Data.Id);
+
+            if (deleteResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(deleteResponse.Result);
+            }
+
+            return Ok(new { message = "Successfully deleted." });
+        }
+
+        [Authorize]
+        [HttpPost("update-my-account")]
+        public async Task<IActionResult> UpdateUsersAccount([FromBody] UpdateUserDto updateUserDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                   .Select(e => e.ErrorMessage)
+                   .ToList();
+
+                var errorMessages = string.Join("; ", errors);
+                ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
+            }
+
+            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            {
+                return Unauthorized(new { message = "Token not found in cookies." });
+            }
+
+            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
+
+            if (getJwtPayloadResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
+            }
+
+            var userResponse = await _userService.GetUserByEmailAsync(getJwtPayloadResponse.Data.Email);
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            if (updateUserDto.Email != null)
+            {
+                userResponse.Data.Email = updateUserDto.Email;
+            }
+            if (updateUserDto.Password != null)
+            {
+                userResponse.Data.Password = await _hashService.GetHashAsync(updateUserDto.Password);
+            }
+            if (updateUserDto.Name != null)
+            {
+                userResponse.Data.Name = updateUserDto.Name;
+            }
+
+            var updateResponse = await _userService.UpdateUserAsync(userResponse.Data);
+
+            if (updateResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(updateResponse.Result);
+            }
+
+            return Ok(new { message = "Successfully updated." });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateAccount([FromBody] UpdateUserForAdminDto updateUserForAdminDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                   .Select(e => e.ErrorMessage)
+                   .ToList();
+
+                var errorMessages = string.Join("; ", errors);
+                ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
+            }
+
+            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            {
+                return Unauthorized(new { message = "Token not found in cookies." });
+            }
+
+            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
+
+            if (getJwtPayloadResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
+            }
+
+            var userResponse = await _userService.GetUserByEmailAsync(updateUserForAdminDto.Email);
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            if (updateUserForAdminDto.Email != null)
+            {
+                userResponse.Data.Email = updateUserForAdminDto.Email;
+            }
+            if (updateUserForAdminDto.Password != null)
+            {
+                userResponse.Data.Password = await _hashService.GetHashAsync(updateUserForAdminDto.Password);
+            }
+            if (updateUserForAdminDto.Name != null)
+            {
+                userResponse.Data.Name = updateUserForAdminDto.Name;
+            }
+            if (updateUserForAdminDto.IsVerified != null)
+            {
+                userResponse.Data.IsVerified = (bool)updateUserForAdminDto.IsVerified;
+            }
+            if (updateUserForAdminDto.Name != null)
+            {
+                userResponse.Data.Name = updateUserForAdminDto.Name;
+            }
+
+            var updateResponse = await _userService.UpdateUserAsync(userResponse.Data);
+
+            if (updateResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(updateResponse.Result);
+            }
+
+            return Ok(new { message = "Successfully updated." });
         }
 
         [Authorize]
         [HttpPost("send-code")]
         public async Task<IActionResult> SendCodeForVerification()
         {
-            try
+            if (!Request.Cookies.TryGetValue("jwt", out var token))
             {
-                if (!Request.Cookies.TryGetValue("jwt", out var token))
+                return Unauthorized(new { message = "Token not found in cookies." });
+            }
+
+            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
+
+            if (getJwtPayloadResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
+            }
+
+            var userResponse = await _userService.GetUserByEmailAsync(getJwtPayloadResponse.Data.Email);
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            var codeResponse = await _emailService.SendEmailToken(userResponse.Data.Email);
+
+            if (codeResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(codeResponse.Result);
+            }
+
+            userResponse.Data.EmailToken = codeResponse.Data;
+
+            var updateResponse = await _userService.UpdateUserAsync(userResponse.Data);
+
+            if (updateResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(updateResponse.Result);
+            }
+
+            return Ok(new { message = "Email code has been sent successfully." });
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto forgotPasswordDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                   .Select(e => e.ErrorMessage)
+                   .ToList();
+
+                var errorMessages = string.Join("; ", errors);
+                ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
+            }
+
+            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            {
+                return Unauthorized(new { message = "Token not found in cookies." });
+            }
+
+            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
+
+            if (getJwtPayloadResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
+            }
+
+            var userResponse = await _userService.GetUserByEmailAsync(getJwtPayloadResponse.Data.Email);
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            if (forgotPasswordDto.EmailCode == userResponse.Data.EmailToken)
+            {
+                userResponse.Data.Password = await _hashService.GetHashAsync(forgotPasswordDto.NewPassword);
+
+                userResponse.Data.EmailToken = string.Empty;
+
+                var updateResponse = await _userService.UpdateUserAsync(userResponse.Data);
+
+                if (updateResponse.Result.IsFailure)
                 {
-                    return Unauthorized(new { message = "Token not found in cookies." });
+                    return ResultExtensions.ToProblemDetails(updateResponse.Result);
                 }
-
-                var user = await _userService.GetUserByEmailAsync((await _tokenService.GetJwtPayload(token)).Email);
-
-                var code = await _emailService.SendEmailToken(user.Email);
-
-                user.EmailToken = code;
-
-                await _userService.UpdateUserAsync(user);
-
-                return Ok(new { message = "Email code has been sent successfully." });
             }
-            catch (Exception ex)
+            else
             {
-                return BadRequest(new { message = ex.Message });
+                return ResultExtensions.ToProblemDetails(Result.Failure(new Error("EmailCode", "Wrong verification code!")));
             }
+
+            return Ok(new { message = "Password was changed successfully." });
         }
 
         [Authorize]
         [HttpPost("verify")]
         public async Task<IActionResult> VerifyUser([FromBody] string code)
         {
-            try
+            if (!Request.Cookies.TryGetValue("jwt", out var token))
             {
-                if (!Request.Cookies.TryGetValue("jwt", out var token))
-                {
-                    return Unauthorized(new { message = "Token not found in cookies." });
-                }
-
-                var user = await _userService.GetUserByEmailAsync((await _tokenService.GetJwtPayload(token)).Email);
-
-                if (code == user.EmailToken)
-                {
-                    user.IsVerified = true;
-
-                    await _userService.UpdateUserAsync(user);
-                }
-                else
-                {
-                    throw new Exception("Wrong verification code!");
-                }
-
-                return Ok(new { message = "Your profile has been verified successfully." });
+                return Unauthorized(new { message = "Token not found in cookies." });
             }
-            catch (Exception ex)
+
+            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
+
+            if (getJwtPayloadResponse.Result.IsFailure)
             {
-                return BadRequest(new { message = ex.Message });
+                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
             }
+
+            var userResponse = await _userService.GetUserByEmailAsync(getJwtPayloadResponse.Data.Email);
+
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            if (code == userResponse.Data.EmailToken)
+            {
+                userResponse.Data.EmailToken = string.Empty;
+            }
+            else
+            {
+                return ResultExtensions.ToProblemDetails(Result.Failure(new Error("EmailCode", "Wrong verification code!")));
+            }
+
+            return Ok(new { message = "Your profile has been verified successfully." });
         }
     }
 }
+ 

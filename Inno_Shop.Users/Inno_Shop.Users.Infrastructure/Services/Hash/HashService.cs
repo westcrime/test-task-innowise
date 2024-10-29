@@ -1,4 +1,5 @@
 ﻿using Inno_Shop.Users.Application.Services.Hash;
+using Inno_Shop.Users.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;

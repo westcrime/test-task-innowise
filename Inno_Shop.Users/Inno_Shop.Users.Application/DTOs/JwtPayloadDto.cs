@@ -7,5 +7,5 @@ using System.Threading.Tasks;
 
 namespace Inno_Shop.Users.Application.DTOs
 {
-    public record JwtPayloadDto(Guid Id, string Email);
+    public record JwtPayloadDto(Guid Id, string Email, Roles Role);
 }

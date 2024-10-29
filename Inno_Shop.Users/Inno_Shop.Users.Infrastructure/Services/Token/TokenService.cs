@@ -12,7 +12,7 @@ public class TokenService(IOptions<JwtOptions> options) : ITokenService
 {
     private readonly JwtOptions _options = options.Value;
 
-    public async Task<string> GenerateJwtTokenAsync(JwtPayloadDto jwtPayloadDto)
+    public async Task<Response<string>> GenerateJwtTokenAsync(JwtPayloadDto jwtPayloadDto)
     {
         var signingCredentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_options.SecretKey)),
@@ -20,7 +20,8 @@ public class TokenService(IOptions<JwtOptions> options) : ITokenService
 
         Claim[] claims = {
             new Claim(ClaimTypes.NameIdentifier, jwtPayloadDto.Id.ToString()),
-            new Claim(ClaimTypes.Email, jwtPayloadDto.Email)
+            new Claim(ClaimTypes.Email, jwtPayloadDto.Email),
+            new Claim(ClaimTypes.Role, jwtPayloadDto.Role.ToString())
         };
 
         var token = new JwtSecurityToken(
@@ -30,10 +31,10 @@ public class TokenService(IOptions<JwtOptions> options) : ITokenService
 
         var tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
 
-        return tokenValue.ToString();
+        return new Response<string>(tokenValue.ToString(), Result.Success());
     }
 
-    public Task<JwtPayloadDto> GetJwtPayload(string token)
+    public Task<Response<JwtPayloadDto>> GetJwtPayload(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_options.SecretKey);
@@ -51,10 +52,11 @@ public class TokenService(IOptions<JwtOptions> options) : ITokenService
 
         var payload = new JwtPayloadDto(
             Guid.Parse(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value),
-            principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value
+            principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value,
+            Enum.Parse<Roles>(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value)
         );
 
 
-        return Task.FromResult(payload);
+        return Task.FromResult(new Response<JwtPayloadDto>(payload, Result.Success()));
     }
 }
