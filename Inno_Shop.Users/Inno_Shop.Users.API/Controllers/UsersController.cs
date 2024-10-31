@@ -105,7 +105,7 @@ namespace Inno_Shop.Users.API.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet("get-user")]
-        public async Task<IActionResult> GetUser([FromBody] string email)
+        public async Task<IActionResult> GetUser([FromQuery] string email)
         {
             var userResponse = await _userService.GetUserByEmailAsync(email);
 
@@ -240,7 +240,7 @@ namespace Inno_Shop.Users.API.Controllers
         }
 
         [Authorize]
-        [HttpPost("update-my-account")]
+        [HttpPut("update-my-account")]
         public async Task<IActionResult> UpdateUsersAccount([FromBody] UpdateUserDto updateUserDto)
         {
             if (!ModelState.IsValid)
@@ -272,10 +272,6 @@ namespace Inno_Shop.Users.API.Controllers
                 return ResultExtensions.ToProblemDetails(userResponse.Result);
             }
 
-            if (updateUserDto.Email != null)
-            {
-                userResponse.Data.Email = updateUserDto.Email;
-            }
             if (updateUserDto.Password != null)
             {
                 userResponse.Data.Password = await _hashService.GetHashAsync(updateUserDto.Password);
@@ -296,7 +292,7 @@ namespace Inno_Shop.Users.API.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPost("update")]
+        [HttpPut("update")]
         public async Task<IActionResult> UpdateAccount([FromBody] UpdateUserForAdminDto updateUserForAdminDto)
         {
             if (!ModelState.IsValid)
@@ -321,7 +317,7 @@ namespace Inno_Shop.Users.API.Controllers
                 return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
             }
 
-            var userResponse = await _userService.GetUserByEmailAsync(updateUserForAdminDto.Email);
+            var userResponse = await _userService.GetUserByIdAsync(Guid.Parse(updateUserForAdminDto.Id));
 
             if (userResponse.Result.IsFailure)
             {
@@ -339,6 +335,10 @@ namespace Inno_Shop.Users.API.Controllers
             if (updateUserForAdminDto.Name != null)
             {
                 userResponse.Data.Name = updateUserForAdminDto.Name;
+            }
+            if (updateUserForAdminDto.Role != null)
+            {
+                userResponse.Data.Role = Enum.Parse<Roles>(updateUserForAdminDto.Role);
             }
             if (updateUserForAdminDto.IsVerified != null)
             {
@@ -359,23 +359,20 @@ namespace Inno_Shop.Users.API.Controllers
             return Ok(new { message = "Successfully updated." });
         }
 
-        [Authorize]
         [HttpPost("send-code")]
-        public async Task<IActionResult> SendCodeForVerification()
+        public async Task<IActionResult> SendCodeForVerification(SendCodeDto sendCodeDto)
         {
-            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            if (!ModelState.IsValid)
             {
-                return Unauthorized(new { message = "Token not found in cookies." });
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                   .Select(e => e.ErrorMessage)
+                   .ToList();
+
+                var errorMessages = string.Join("; ", errors);
+                ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
             }
 
-            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
-
-            if (getJwtPayloadResponse.Result.IsFailure)
-            {
-                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
-            }
-
-            var userResponse = await _userService.GetUserByEmailAsync(getJwtPayloadResponse.Data.Email);
+            var userResponse = await _userService.GetUserByEmailAsync(sendCodeDto.Email);
 
             if (userResponse.Result.IsFailure)
             {
@@ -414,26 +411,14 @@ namespace Inno_Shop.Users.API.Controllers
                 ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
             }
 
-            if (!Request.Cookies.TryGetValue("jwt", out var token))
-            {
-                return Unauthorized(new { message = "Token not found in cookies." });
-            }
-
-            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
-
-            if (getJwtPayloadResponse.Result.IsFailure)
-            {
-                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
-            }
-
-            var userResponse = await _userService.GetUserByEmailAsync(getJwtPayloadResponse.Data.Email);
+            var userResponse = await _userService.GetUserByEmailAsync(forgotPasswordDto.Email);
 
             if (userResponse.Result.IsFailure)
             {
                 return ResultExtensions.ToProblemDetails(userResponse.Result);
             }
 
-            if (forgotPasswordDto.EmailCode == userResponse.Data.EmailToken)
+            if (userResponse.Data.EmailToken != string.Empty && forgotPasswordDto.EmailCode == userResponse.Data.EmailToken)
             {
                 userResponse.Data.Password = await _hashService.GetHashAsync(forgotPasswordDto.NewPassword);
 
@@ -477,9 +462,16 @@ namespace Inno_Shop.Users.API.Controllers
                 return ResultExtensions.ToProblemDetails(userResponse.Result);
             }
 
-            if (code == userResponse.Data.EmailToken)
+            if (userResponse.Data.EmailToken != string.Empty && code == userResponse.Data.EmailToken)
             {
                 userResponse.Data.EmailToken = string.Empty;
+                userResponse.Data.IsVerified = true;
+                var updateResponse = await _userService.UpdateUserAsync(userResponse.Data);
+
+                if (updateResponse.Result.IsFailure)
+                {
+                    return ResultExtensions.ToProblemDetails(updateResponse.Result);
+                }
             }
             else
             {

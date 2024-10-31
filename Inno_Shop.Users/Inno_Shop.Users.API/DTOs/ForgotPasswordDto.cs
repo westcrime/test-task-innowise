@@ -2,5 +2,5 @@
 
 namespace Inno_Shop.Users.API.DTOs
 {
-    public record ForgotPasswordDto(string EmailCode, string NewPassword);
+    public record ForgotPasswordDto(string Email, string EmailCode, string NewPassword);
 }

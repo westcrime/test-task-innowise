@@ -29,5 +29,21 @@ namespace Inno_Shop.Users.Infrastructure.Services.Hash
                 }
             });
         }
+
+        public string GetHash(string key)
+        {
+            using (SHA256 sha256Hash = SHA256.Create())
+            {
+                byte[] bytes = sha256Hash.ComputeHash(Encoding.ASCII.GetBytes(key));
+
+                StringBuilder builder = new StringBuilder();
+                foreach (byte b in bytes)
+                {
+                    builder.Append(b.ToString("x2"));
+                }
+
+                return builder.ToString();
+            }
+        }
     }
 }

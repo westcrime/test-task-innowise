@@ -10,5 +10,6 @@ namespace Inno_Shop.Users.Application.Services.Hash
     public interface IHashService
     {
         Task<string> GetHashAsync(string key);
+        string GetHash(string key);
     }
 }

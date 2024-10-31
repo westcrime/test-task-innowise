@@ -30,7 +30,11 @@
   <ItemGroup>
     <ProjectReference Include="..\Inno_Shop.Users.Application\Inno_Shop.Users.Application.csproj" />
     <ProjectReference Include="..\Inno_Shop.Users.Domain\Inno_Shop.Users.Domain.csproj" />
-    <ProjectReference Include="..\Inno_Shop.Users.Infrastructure\Inno_Shop.Users.Infrastructure.csproj" />
+	<ProjectReference Include="..\Inno_Shop.Users.Infrastructure\Inno_Shop.Users.Infrastructure.csproj" />
   </ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Inno_Shop.Users.API.IntegrationTests" />
+	</ItemGroup>
 
 </Project>

@@ -44,6 +44,15 @@ public class UserRepository : IUserRepository
 
     public async Task<Response<User>> AddUserAsync(User user)
     {
+        if (await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email) != null)
+        {
+            return new Response<User>(null, Result.Failure(UserErrors.EmailAlreadyExists));
+        }
+
+        if (await _context.Users.FirstOrDefaultAsync(u => u.Name == user.Name) != null)
+        {
+            return new Response<User>(null, Result.Failure(UserErrors.NameAlreadyExists));
+        }
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
         return new Response<User>(user, Result.Success());

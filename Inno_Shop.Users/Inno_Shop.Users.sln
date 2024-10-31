@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Inno_Shop.Users.Infrastruct
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Inno_Shop.Users.API", "Inno_Shop.Users.API\Inno_Shop.Users.API.csproj", "{7097823C-7C68-46BE-82D0-7FE8D6367D5F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inno_Shop.Users.Tests", "Inno_Shop.Users.Tests\Inno_Shop.Users.Tests.csproj", "{26E3F926-57E2-43D3-93B1-D430A40B2BEF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Inno_Shop.Users.Tests", "Inno_Shop.Users.Tests\Inno_Shop.Users.Tests.csproj", "{26E3F926-57E2-43D3-93B1-D430A40B2BEF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inno_Shop.Users.API.IntegrationTests", "Inno_Shop.Users.API.IntegrationTests\Inno_Shop.Users.API.IntegrationTests.csproj", "{5CAAFBE2-5AD3-40C8-AC66-48886068585C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{26E3F926-57E2-43D3-93B1-D430A40B2BEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{26E3F926-57E2-43D3-93B1-D430A40B2BEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{26E3F926-57E2-43D3-93B1-D430A40B2BEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CAAFBE2-5AD3-40C8-AC66-48886068585C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CAAFBE2-5AD3-40C8-AC66-48886068585C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CAAFBE2-5AD3-40C8-AC66-48886068585C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CAAFBE2-5AD3-40C8-AC66-48886068585C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
