@@ -1,4 +1,5 @@
-﻿using Inno_Shop.Users.API.DTOs;
+﻿using FluentValidation;
+using Inno_Shop.Users.API.DTOs;
 using Inno_Shop.Users.API.Extensions;
 using Inno_Shop.Users.API.Middlewares;
 using Inno_Shop.Users.Application.DTOs;
@@ -20,13 +21,22 @@ namespace Inno_Shop.Users.API.Controllers
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
         private readonly IHashService _hashService;
+        private readonly IValidator<GetUserDto> _getUserDtoValidator;
+        private readonly IValidator<DeleteUserDto> _deleteUserDtoValidator;
+        private ILogger<UsersController> _logger;
 
-        public UsersController(IUserService userService, IEmailService emailService, ITokenService tokenService, IHashService hashService)
+        public UsersController(IValidator<GetUserDto> getUserDtoValidator,
+            IValidator<DeleteUserDto> deleteUserDtoValidator,
+            ILogger<UsersController> logger,
+            IUserService userService, IEmailService emailService, ITokenService tokenService, IHashService hashService)
         {
             _userService = userService;
             _emailService = emailService;
             _tokenService = tokenService;
             _hashService = hashService;
+            _getUserDtoValidator = getUserDtoValidator;
+            _deleteUserDtoValidator = deleteUserDtoValidator;
+            _logger = logger;
         }
 
         [HttpPost("register")]
@@ -49,15 +59,10 @@ namespace Inno_Shop.Users.API.Controllers
                 return ResultExtensions.ToProblemDetails(resultResponse.Result);
             }
 
-            Response.Cookies.Append("jwt", resultResponse.Data, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true
-            });
-
             return Ok(new
             {
-                Message = "Registration is successful!"
+                Message = "Registration is successful!",
+                Token = resultResponse.Data
             });
         }
 
@@ -69,27 +74,20 @@ namespace Inno_Shop.Users.API.Controllers
                 var errors = ModelState.Values.SelectMany(v => v.Errors)
                    .Select(e => e.ErrorMessage)
                    .ToList();
-
                 var errorMessages = string.Join("; ", errors);
-                ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
+                return ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
             }
 
             var resultResponse = await _userService.LoginUserAsync(loginUserDto);
-
             if (resultResponse.Result.IsFailure)
             {
                 return ResultExtensions.ToProblemDetails(resultResponse.Result);
             }
 
-            Response.Cookies.Append("jwt", resultResponse.Data, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true
-            });
-
             return Ok(new
             {
-                Message = "Login is successful!"
+                Message = "Login is successful!",
+                Token = resultResponse.Data
             });
         }
 
@@ -104,18 +102,57 @@ namespace Inno_Shop.Users.API.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpGet("get-user")]
-        public async Task<IActionResult> GetUser([FromQuery] string email)
+        [HttpGet("get-user/{email}")]
+        public async Task<IActionResult> GetUser([FromRoute] string email)
         {
-            var userResponse = await _userService.GetUserByEmailAsync(email);
+            var getUserDto = new GetUserDto(email);
+
+            var validationResult = await _getUserDtoValidator.ValidateAsync(getUserDto);
+
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
+                return ResultExtensions.ToProblemDetails(Result.Failure(new Error(errors.ToString())));
+            }
+
+            var userResponse = await _userService.GetUserByEmailAsync(getUserDto.Email);
 
             if (userResponse.Result.IsFailure)
             {
                 return ResultExtensions.ToProblemDetails(userResponse.Result);
             }
 
-            return Ok(new { user = userResponse.Data });
+            return Ok(userResponse.Data);
         }
+
+        [Authorize]
+        [HttpGet("get-my-account")]
+        public async Task<IActionResult> GetUsersAccount()
+        {
+            if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                return Unauthorized(new { message = "Authorization header not found." });
+            }
+
+            var token = authHeader.ToString().Replace("Bearer ", "");
+
+            _logger.LogDebug($"Token: {token}");
+
+            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
+            if (getJwtPayloadResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
+            }
+
+            var userResponse = await _userService.GetUserByEmailAsync(getJwtPayloadResponse.Data.Email);
+            if (userResponse.Result.IsFailure)
+            {
+                return ResultExtensions.ToProblemDetails(userResponse.Result);
+            }
+
+            return Ok(userResponse.Data);
+        }
+
 
         [Authorize(Roles = "Admin")]
         [HttpGet("get-users")]
@@ -128,17 +165,28 @@ namespace Inno_Shop.Users.API.Controllers
                 return ResultExtensions.ToProblemDetails(userResponse.Result);
             }
 
-            return Ok(new { users = userResponse.Data });
+            return Ok(userResponse.Data);
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPost("delete")]
-        public async Task<IActionResult> DeleteUser([FromBody] string email)
+        [HttpDelete("delete/{email}")]
+        public async Task<IActionResult> DeleteUser([FromRoute] string email)
         {
-            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            var deleteUserDto = new DeleteUserDto(email);
+
+            var validationResult = await _deleteUserDtoValidator.ValidateAsync(deleteUserDto);
+
+            if (!validationResult.IsValid)
             {
-                return Unauthorized(new { message = "Token not found in cookies." });
+                var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
+                return ResultExtensions.ToProblemDetails(Result.Failure(new Error(errors.ToString())));
             }
+
+            if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
+            {
+                return Unauthorized(new { message = "Authorization header not found." });
+            }
+            var token = authHeader.ToString().Replace("Bearer ", "");
 
             var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
 
@@ -178,11 +226,6 @@ namespace Inno_Shop.Users.API.Controllers
                 ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
             }
 
-            if (!Request.Cookies.TryGetValue("jwt", out var token))
-            {
-                return Unauthorized(new { message = "Token not found in cookies." });
-            }
-
             var hashedPassword = await _hashService.GetHashAsync(addUserDto.Password);
 
             var user = new User
@@ -207,13 +250,15 @@ namespace Inno_Shop.Users.API.Controllers
 
 
         [Authorize]
-        [HttpPost("delete-my-account")]
+        [HttpDelete("delete-my-account")]
         public async Task<IActionResult> DeleteUsersAccount()
         {
-            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
             {
-                return Unauthorized(new { message = "Token not found in cookies." });
+                return Unauthorized(new { message = "Authorization header not found." });
             }
+
+            var token = authHeader.ToString().Replace("Bearer ", "");
 
             var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
 
@@ -253,10 +298,12 @@ namespace Inno_Shop.Users.API.Controllers
                 ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
             }
 
-            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
             {
-                return Unauthorized(new { message = "Token not found in cookies." });
+                return Unauthorized(new { message = "Authorization header not found." });
             }
+
+            var token = authHeader.ToString().Replace("Bearer ", "");
 
             var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
 
@@ -303,18 +350,6 @@ namespace Inno_Shop.Users.API.Controllers
 
                 var errorMessages = string.Join("; ", errors);
                 ResultExtensions.ToProblemDetails(Result.Failure(new Error("ValidationError", errorMessages)));
-            }
-
-            if (!Request.Cookies.TryGetValue("jwt", out var token))
-            {
-                return Unauthorized(new { message = "Token not found in cookies." });
-            }
-
-            var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
-
-            if (getJwtPayloadResponse.Result.IsFailure)
-            {
-                return ResultExtensions.ToProblemDetails(getJwtPayloadResponse.Result);
             }
 
             var userResponse = await _userService.GetUserByIdAsync(Guid.Parse(updateUserForAdminDto.Id));
@@ -443,10 +478,12 @@ namespace Inno_Shop.Users.API.Controllers
         [HttpPost("verify")]
         public async Task<IActionResult> VerifyUser([FromBody] string code)
         {
-            if (!Request.Cookies.TryGetValue("jwt", out var token))
+            if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
             {
-                return Unauthorized(new { message = "Token not found in cookies." });
+                return Unauthorized(new { message = "Authorization header not found." });
             }
+
+            var token = authHeader.ToString().Replace("Bearer ", "");
 
             var getJwtPayloadResponse = await _tokenService.GetJwtPayload(token);
 

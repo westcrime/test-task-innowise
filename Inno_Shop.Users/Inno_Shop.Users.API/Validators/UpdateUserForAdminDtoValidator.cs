@@ -14,8 +14,8 @@ namespace Inno_Shop.Users.API.Validators
 
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Name is required.")
-                .When(x => x.Name != null)
-                .MaximumLength(40);
+                .MaximumLength(40)
+                .When(x => x.Name != null);
 
             RuleFor(x => x.Password)
                 .NotEmpty().WithMessage("Password is required.")
@@ -24,19 +24,19 @@ namespace Inno_Shop.Users.API.Validators
                 .Matches(@"[a-z]").WithMessage("Password must contain at least one lowercase letter.")
                 .Matches(@"[0-9]").WithMessage("Password must contain at least one number.")
                 .Matches(@"[\!\?\*\.]").WithMessage("Password must contain at least one special character (!? * .).")
-                .When(x => x.Password != null)
-                .MaximumLength(100);
+                .MaximumLength(100)
+                .When(x => x.Password != null);
 
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("Invalid email format.")
-                .When(x => x.Email != null)
-                .MaximumLength(40);
+                .MaximumLength(40)
+                .When(x => x.Email != null);
 
             RuleFor(x => x.Role)
                 .Must(role => Enum.IsDefined(typeof(Roles), role)).WithMessage("Invalid role.")
-                .When(x => x.Role != null)
-                .MaximumLength(40);
+                .MaximumLength(40)
+                .When(x => x.Role != null);
 
         }
     }

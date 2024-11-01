@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Inno_Shop.Products.Application\Inno_Shop.Products.Application.csproj" />
+    <ProjectReference Include="..\Inno_Shop.Products.Domain\Inno_Shop.Products.Domain.csproj" />
+    <ProjectReference Include="..\Inno_Shop.Products.Infrastructure\Inno_Shop.Products.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

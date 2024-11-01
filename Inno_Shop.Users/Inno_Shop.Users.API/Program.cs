@@ -15,11 +15,14 @@ using Inno_Shop.Users.Infrastructure.JwtOptions;
 using Inno_Shop.Users.Infrastructure.Options;
 using Inno_Shop.Users.Infrastructure.Services.Email;
 using Inno_Shop.Users.Infrastructure.Services.Hash;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using System.Configuration;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -35,13 +38,55 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 12345abcdef\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+            },
+            new List<string>()
+        }
+    });
+});
 
 builder.Services.Configure<JwtOptions>(configuration.GetSection(nameof(JwtOptions)));
 builder.Services.Configure<EmailOptions>(configuration.GetSection(nameof(EmailOptions)));
 builder.Services.Configure<AdminCredentialsOptions>(configuration.GetSection(nameof(AdminCredentialsOptions)));
 
-builder.Services.AddApiAuthentication(builder.Services.BuildServiceProvider().GetService<IOptions<JwtOptions>>());
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opt =>
+    {
+        var jwtOptions = configuration.GetSection(nameof(JwtOptions)).Get<JwtOptions>();
+        opt.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtOptions.SecretKey))
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -64,6 +109,14 @@ builder.Services.AddFluentValidationAutoValidation()
 
 builder.Services.AddFluentValidationAutoValidation()
     .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<DeleteUserDtoValidator>();
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddValidatorsFromAssemblyContaining<GetUserDtoValidator>();
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
     .AddValidatorsFromAssemblyContaining<ForgotPasswordDtoValidator>();
 
 builder.Services.AddFluentValidationAutoValidation()
@@ -76,10 +129,6 @@ builder.Services.AddFluentValidationAutoValidation()
 
 builder.Services.AddFluentValidationAutoValidation()
     .AddFluentValidationClientsideAdapters()
-    .AddValidatorsFromAssemblyContaining<LoginUserDtoValidator>();
-
-builder.Services.AddFluentValidationAutoValidation()
-    .AddFluentValidationClientsideAdapters()
     .AddValidatorsFromAssemblyContaining<SendCodeDtoValidator>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -87,6 +136,7 @@ builder.Services.AddProblemDetails();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
+builder.Logging.AddDebug();
 
 var app = builder.Build();
 
@@ -114,7 +164,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseWhen(context => !(context.Request.Path.StartsWithSegments("/api/Users/login") || context.Request.Path.StartsWithSegments("/api/Users/register")
 || context.Request.Path.StartsWithSegments("/api/Users/verify") || context.Request.Path.StartsWithSegments("/api/Users/send-code")
