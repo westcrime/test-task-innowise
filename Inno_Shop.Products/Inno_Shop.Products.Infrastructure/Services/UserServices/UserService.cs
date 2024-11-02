@@ -9,13 +9,11 @@ namespace Inno_Shop.Products.Infrastructure.Services.UserServices
     public class UserService
     {
         private readonly IOptions<UserServerOptions> _userServerOptions;
-        private readonly IOptions<JwtOptions> _jwtOptions;
         private readonly IHttpClientFactory _clientFactory;
 
-        public UserService(IOptions<UserServerOptions> userServerOptions, IOptions<JwtOptions> jwtOptions, IHttpClientFactory clientFactory)
+        public UserService(IOptions<UserServerOptions> userServerOptions, IHttpClientFactory clientFactory)
         {
             _userServerOptions = userServerOptions;
-            _jwtOptions = jwtOptions;
             _clientFactory = clientFactory;
         }
 

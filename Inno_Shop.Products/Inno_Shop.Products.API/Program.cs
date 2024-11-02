@@ -12,6 +12,8 @@ using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Inno_Shop.Products.Infrastructure.Services.UserServices;
 using Inno_Shop.Products.Application.Repositories;
 using Inno_Shop.Products.Infrastructure.Repositories;
+using System.Configuration;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -29,7 +31,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
 });
 
-builder.Services.Configure<JwtOptions>(configuration.GetSection(nameof(JwtOptions)));
 builder.Services.Configure<UserServerOptions>(configuration.GetSection(nameof(UserServerOptions)));
 
 builder.Services.AddControllers();
