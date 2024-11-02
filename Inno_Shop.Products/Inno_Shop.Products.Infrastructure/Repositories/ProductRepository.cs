@@ -28,7 +28,7 @@ namespace Inno_Shop.Products.Infrastructure.Repositories
                 Name = addProductDto.Name,
                 Description = addProductDto.Description,
                 Cost = addProductDto.Cost,
-                UserId = addProductDto.UserId
+                UserId = (Guid)addProductDto.UserId
             };
             await _context.Products.AddAsync(newProduct);
             await _context.SaveChangesAsync();

@@ -3,13 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inno_Shop.Products.Domain", "Inno_Shop.Products.Domain\Inno_Shop.Products.Domain.csproj", "{39EECFE2-A398-4A5D-80BC-F602B368FF15}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Inno_Shop.Products.Domain", "Inno_Shop.Products.Domain\Inno_Shop.Products.Domain.csproj", "{39EECFE2-A398-4A5D-80BC-F602B368FF15}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inno_Shop.Products.Application", "Inno_Shop.Products.Application\Inno_Shop.Products.Application.csproj", "{34D80AFC-5933-4E32-B720-A0F2A8C85A54}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Inno_Shop.Products.Application", "Inno_Shop.Products.Application\Inno_Shop.Products.Application.csproj", "{34D80AFC-5933-4E32-B720-A0F2A8C85A54}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inno_Shop.Products.Infrastructure", "Inno_Shop.Products.Infrastructure\Inno_Shop.Products.Infrastructure.csproj", "{D22EF208-E024-4B9F-A6B0-B23F8A44DFC4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Inno_Shop.Products.Infrastructure", "Inno_Shop.Products.Infrastructure\Inno_Shop.Products.Infrastructure.csproj", "{D22EF208-E024-4B9F-A6B0-B23F8A44DFC4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inno_Shop.Products.API", "Inno_Shop.Products.API\Inno_Shop.Products.API.csproj", "{30ADE0E1-DFFD-4284-A160-7929DB48F1B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Inno_Shop.Products.API", "Inno_Shop.Products.API\Inno_Shop.Products.API.csproj", "{30ADE0E1-DFFD-4284-A160-7929DB48F1B4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inno_Shop.Products.UnitTests", "Inno_Shop.Products.UnitTests\Inno_Shop.Products.UnitTests.csproj", "{B4715759-B015-4EFD-A07D-113DBFADC591}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Inno_Shop.Products.IntegrationTests", "Inno_Shop.Products.IntegrationTests\Inno_Shop.Products.IntegrationTests.csproj", "{0EE383D4-C9FB-452E-B1A5-E2B20EC1E9CA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +37,14 @@ Global
 		{30ADE0E1-DFFD-4284-A160-7929DB48F1B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30ADE0E1-DFFD-4284-A160-7929DB48F1B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30ADE0E1-DFFD-4284-A160-7929DB48F1B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4715759-B015-4EFD-A07D-113DBFADC591}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4715759-B015-4EFD-A07D-113DBFADC591}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4715759-B015-4EFD-A07D-113DBFADC591}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4715759-B015-4EFD-A07D-113DBFADC591}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EE383D4-C9FB-452E-B1A5-E2B20EC1E9CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EE383D4-C9FB-452E-B1A5-E2B20EC1E9CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EE383D4-C9FB-452E-B1A5-E2B20EC1E9CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EE383D4-C9FB-452E-B1A5-E2B20EC1E9CA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

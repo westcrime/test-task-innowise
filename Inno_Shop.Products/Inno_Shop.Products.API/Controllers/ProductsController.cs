@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Inno_Shop.Products.API.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class ProductsController : ControllerBase
     {
         private readonly ILogger<ProductsController> _logger;
@@ -193,6 +193,12 @@ namespace Inno_Shop.Products.API.Controllers
             if (userResponse.Result.IsFailure)
             {
                 return ResultExtensions.ToProblemDetails(Result.Failure(userResponse.Result.Error));
+            }
+
+            if (addProductDto.UserId == null)
+            {
+                addProductDto = new AddProductDto(addProductDto.Name, addProductDto.Description, addProductDto.Cost,
+                    userResponse.Data.Id);
             }
 
             var productsResponse = await _productService.AddProductAsync(addProductDto);

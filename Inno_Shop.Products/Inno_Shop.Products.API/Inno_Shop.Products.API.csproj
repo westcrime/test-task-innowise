@@ -17,4 +17,8 @@
     <ProjectReference Include="..\Inno_Shop.Products.Infrastructure\Inno_Shop.Products.Infrastructure.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="Inno_Shop.Products.IntegrationTests" />
+	</ItemGroup>
+	
 </Project>

@@ -23,9 +23,6 @@ namespace Inno_Shop.Products.Application.Validators
             RuleFor(x => x.Cost)
                 .NotEmpty().WithMessage("Cost is required.")
                 .Must(cost => cost > 0);
-
-            RuleFor(x => x.UserId)
-                .NotEmpty().WithMessage("User id is required.");
         }
     }
 }

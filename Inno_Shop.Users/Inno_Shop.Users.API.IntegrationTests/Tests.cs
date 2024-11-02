@@ -1,3 +1,4 @@
+using Inno_Shop.Products.IntegrationTests.Constants;
 using Inno_Shop.Users.API.DTOs;
 using Inno_Shop.Users.Application.DTOs;
 using Inno_Shop.Users.Domain.Entities;
@@ -16,7 +17,7 @@ namespace Inno_Shop.Users.API.IntegrationTests
         {
             // Arrange
             var application = new UsersWebApplicationFactory();
-            var loginUserDto = new LoginUserDto("admin@example.com", "adminpassword12Q!");
+            var loginUserDto = TestConstants.AdminCredentials();
             var client = application.CreateClient();
 
             // Act
@@ -61,7 +62,7 @@ namespace Inno_Shop.Users.API.IntegrationTests
         {
             // Arrange
             var application = new UsersWebApplicationFactory();
-            var loginUserDto = new LoginUserDto("admin@example.com", "adminpassword12Q!");
+            var loginUserDto = TestConstants.AdminCredentials();
             var user1 = new AddUserDto("newUser1", "example1@email.com", "blablaBLA12!!", true, "User");
             var user2 = new AddUserDto("newUser2", "example2@email.com", "blablaBLA12!!", true, "User");
             var client = application.CreateClient();
@@ -90,7 +91,7 @@ namespace Inno_Shop.Users.API.IntegrationTests
         {
             // Arrange
             var application = new UsersWebApplicationFactory();
-            var loginUserDto = new LoginUserDto("admin@example.com", "adminpassword12Q!");
+            var loginUserDto = TestConstants.AdminCredentials();
             var updateUserDto = new UpdateUserDto("Updated Admin", null);
             var client = application.CreateClient();
 
@@ -127,7 +128,7 @@ namespace Inno_Shop.Users.API.IntegrationTests
         {
             // Arrange
             var application = new UsersWebApplicationFactory();
-            var loginUserDto = new LoginUserDto("admin@example.com", "adminpassword12Q!");
+            var loginUserDto = TestConstants.AdminCredentials();
             var user1 = new AddUserDto("newUser1", "example1@email.com", "blablaBLA12!!", true, "User");
             var client = application.CreateClient();
 
@@ -162,7 +163,7 @@ namespace Inno_Shop.Users.API.IntegrationTests
         {
             // Arrange
             var application = new UsersWebApplicationFactory();
-            var loginUserDto = new LoginUserDto("admin@example.com", "adminpassword12Q!");
+            var loginUserDto = TestConstants.AdminCredentials();
             var user1 = new AddUserDto("newUser1", "example1@email.com", "blablaBLA12!!", true, "User");
             var client = application.CreateClient();
 
