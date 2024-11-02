@@ -7,6 +7,8 @@ using Inno_Shop.Products.Application.Validators;
 using Inno_Shop.Products.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Inno_Shop.Products.Infrastructure.Services.UserServices;
 using Inno_Shop.Products.Application.Repositories;
 using Inno_Shop.Products.Infrastructure.Repositories;
@@ -16,16 +18,21 @@ var configuration = builder.Configuration;
 
 // Add services to the container.
 
+builder.WebHost.UseKestrel()
+    .ConfigureKestrel((context, options) =>
+    {
+        options.ListenAnyIP(5245);
+    });
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlite("Data Source=InnoShopDB.sqlite");
+    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
 });
 
 builder.Services.Configure<JwtOptions>(configuration.GetSection(nameof(JwtOptions)));
 builder.Services.Configure<UserServerOptions>(configuration.GetSection(nameof(UserServerOptions)));
 
 builder.Services.AddControllers();
-
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

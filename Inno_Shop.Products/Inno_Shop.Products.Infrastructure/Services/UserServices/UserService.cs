@@ -26,7 +26,7 @@ namespace Inno_Shop.Products.Infrastructure.Services.UserServices
                 return new Response<User>(null, Result.Failure(new Error("Token is null or empty.", null)));
             }
 
-            var getAccountUri = $"http://localhost:{_userServerOptions.Value.Port}/api/Users/get-my-account";
+            var getAccountUri = $"{_userServerOptions.Value.Url}/api/Users/get-my-account";
             var request = new HttpRequestMessage(HttpMethod.Get, getAccountUri);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 

@@ -21,6 +21,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using System.Configuration;
 using System.Text;
 
@@ -29,10 +31,15 @@ var configuration = builder.Configuration;
 
 // Add services to the container.
 
+builder.WebHost.UseKestrel()
+    .ConfigureKestrel((context, options) =>
+    {
+        options.ListenAnyIP(5098);
+    });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlite("Data Source=InnoShopDB.sqlite");
+    options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
 });
 
 builder.Services.AddControllers();

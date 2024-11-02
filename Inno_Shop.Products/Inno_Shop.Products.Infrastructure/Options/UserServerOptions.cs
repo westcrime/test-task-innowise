@@ -2,6 +2,6 @@
 {
     public class UserServerOptions
     {
-        public int Port { get; set; }
+        public string Url { get; set; }
     }
 }
