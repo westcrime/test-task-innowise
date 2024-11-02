@@ -19,10 +19,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using System.Configuration;
 using System.Text;
 
@@ -144,8 +143,13 @@ builder.Services.AddProblemDetails();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
-
 var app = builder.Build();
+
+//using (var scope = app.Services.CreateScope())
+//{
+//    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//    dbContext.Database.Migrate(); // Применяет все миграции
+//}
 
 using (var scope = app.Services.CreateScope())
 {

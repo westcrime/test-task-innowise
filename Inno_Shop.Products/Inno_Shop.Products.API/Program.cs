@@ -6,14 +6,12 @@ using Inno_Shop.Products.Application.Services;
 using Inno_Shop.Products.Application.Validators;
 using Inno_Shop.Products.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Inno_Shop.Products.Infrastructure.Services.UserServices;
 using Inno_Shop.Products.Application.Repositories;
 using Inno_Shop.Products.Infrastructure.Repositories;
 using System.Configuration;
 using System.Text;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -85,8 +83,13 @@ builder.Services.AddFluentValidationAutoValidation()
 builder.Services.AddFluentValidationAutoValidation()
     .AddFluentValidationClientsideAdapters()
     .AddValidatorsFromAssemblyContaining<UpdateProductDtoValidator>();
-
 var app = builder.Build();
+
+//using (var scope = app.Services.CreateScope())
+//{
+//    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//    dbContext.Database.Migrate(); // Применяет все миграции
+//}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
