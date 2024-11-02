@@ -13,7 +13,7 @@ namespace Inno_Shop.Users.API.Middlewares
         {
             try
             {
-                var getJwtPayloadResponse = await tokenService.GetJwtPayload(context.Request.Cookies["jwt"]);
+                var getJwtPayloadResponse = await tokenService.GetJwtPayload(context.Request.Headers["Authorization"].ToString().Replace("Bearer ", ""));
 
                 if (getJwtPayloadResponse.Result.IsFailure)
                 {

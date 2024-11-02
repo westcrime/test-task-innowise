@@ -10,8 +10,8 @@ namespace Inno_Shop.Users.API.Validators
         {
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Name is required.")
-                .When(x => x.Name != null)
-                .MaximumLength(40);
+                .MaximumLength(40)
+                .When(x => x.Name != null);
 
             RuleFor(x => x.Password)
                 .NotEmpty().WithMessage("Password is required.")
@@ -20,8 +20,8 @@ namespace Inno_Shop.Users.API.Validators
                 .Matches(@"[a-z]").WithMessage("Password must contain at least one lowercase letter.")
                 .Matches(@"[0-9]").WithMessage("Password must contain at least one number.")
                 .Matches(@"[\!\?\*\.]").WithMessage("Password must contain at least one special character (!? * .).")
-                .When(x => x.Password != null)
-                .MaximumLength(100);
+                .MaximumLength(100)
+                .When(x => x.Password != null);
         }
     }
 }

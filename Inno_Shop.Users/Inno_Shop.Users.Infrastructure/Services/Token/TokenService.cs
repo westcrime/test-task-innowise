@@ -8,9 +8,14 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-public class TokenService(IOptions<JwtOptions> options) : ITokenService
+public class TokenService : ITokenService
 {
-    private readonly JwtOptions _options = options.Value;
+    private readonly JwtOptions _options;
+
+    public TokenService(IOptions<JwtOptions> options)
+    {
+        _options = options.Value;
+    }
 
     public async Task<Response<string>> GenerateJwtTokenAsync(JwtPayloadDto jwtPayloadDto)
     {
@@ -30,15 +35,13 @@ public class TokenService(IOptions<JwtOptions> options) : ITokenService
             expires: DateTime.UtcNow.AddSeconds(_options.Seconds));
 
         var tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
-
-        return new Response<string>(tokenValue.ToString(), Result.Success());
+        return new Response<string>(tokenValue, Result.Success());
     }
 
-    public Task<Response<JwtPayloadDto>> GetJwtPayload(string token)
+    public async Task<Response<JwtPayloadDto>> GetJwtPayload(string token)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_options.SecretKey);
-
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
@@ -48,15 +51,20 @@ public class TokenService(IOptions<JwtOptions> options) : ITokenService
             ClockSkew = TimeSpan.Zero
         };
 
-        var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+            var payload = new JwtPayloadDto(
+                Guid.Parse(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value),
+                principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value,
+                Enum.Parse<Roles>(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value)
+            );
 
-        var payload = new JwtPayloadDto(
-            Guid.Parse(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value),
-            principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value,
-            Enum.Parse<Roles>(principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value)
-        );
-
-
-        return Task.FromResult(new Response<JwtPayloadDto>(payload, Result.Success()));
+            return new Response<JwtPayloadDto>(payload, Result.Success());
+        }
+        catch (Exception ex)
+        {
+            return new Response<JwtPayloadDto>(null, Result.Failure(new Error("TokenValidationError", ex.Message)));
+        }
     }
 }
