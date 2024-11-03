@@ -11,22 +11,24 @@ namespace Inno_Shop.Users.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "Users",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Email = table.Column<string>(type: "text", nullable: false),
-                    Password = table.Column<string>(type: "text", nullable: false),
-                    Role = table.Column<int>(type: "integer", nullable: false),
-                    EmailToken = table.Column<string>(type: "text", nullable: false),
-                    IsVerified = table.Column<bool>(type: "boolean", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Users", x => x.Id);
-                });
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'Users') THEN
+                        CREATE TABLE ""Users"" (
+                            ""Id"" uuid NOT NULL,
+                            ""Name"" text NOT NULL,
+                            ""Email"" text NOT NULL,
+                            ""Password"" text NOT NULL,
+                            ""Role"" integer NOT NULL,
+                            ""EmailToken"" text NOT NULL,
+                            ""IsVerified"" boolean NOT NULL,
+                            CONSTRAINT ""PK_Users"" PRIMARY KEY (""Id"")
+                        );
+                    END IF;
+                END
+                $$;
+            ");
         }
 
         /// <inheritdoc />

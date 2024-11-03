@@ -11,20 +11,22 @@ namespace Inno_Shop.Products.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "Products",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: false),
-                    Cost = table.Column<double>(type: "double precision", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Products", x => x.Id);
-                });
+            migrationBuilder.Sql(@"
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'Products') THEN
+                        CREATE TABLE ""Products"" (
+                            ""Id"" uuid NOT NULL,
+                            ""Name"" text NOT NULL,
+                            ""Description"" text NOT NULL,
+                            ""Cost"" double precision NOT NULL,
+                            ""UserId"" uuid NOT NULL,
+                            CONSTRAINT ""PK_Products"" PRIMARY KEY (""Id"")
+                        );
+                    END IF;
+                END
+                $$;
+            ");
         }
 
         /// <inheritdoc />

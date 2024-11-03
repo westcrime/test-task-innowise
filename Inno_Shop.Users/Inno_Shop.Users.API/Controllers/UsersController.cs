@@ -476,7 +476,7 @@ namespace Inno_Shop.Users.API.Controllers
 
         [Authorize]
         [HttpPost("verify")]
-        public async Task<IActionResult> VerifyUser([FromBody] string code)
+        public async Task<IActionResult> VerifyUser([FromBody] VerifyUserDto verifyUserDto)
         {
             if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
             {
@@ -499,7 +499,7 @@ namespace Inno_Shop.Users.API.Controllers
                 return ResultExtensions.ToProblemDetails(userResponse.Result);
             }
 
-            if (userResponse.Data.EmailToken != string.Empty && code == userResponse.Data.EmailToken)
+            if (userResponse.Data.EmailToken != string.Empty && verifyUserDto.Code == userResponse.Data.EmailToken)
             {
                 userResponse.Data.EmailToken = string.Empty;
                 userResponse.Data.IsVerified = true;
